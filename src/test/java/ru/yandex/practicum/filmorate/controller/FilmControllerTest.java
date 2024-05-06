@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.controller;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
@@ -10,7 +11,12 @@ import java.time.LocalDate;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class FilmControllerTest {
-    static FilmController filmController = new FilmController();
+    private static FilmController filmController;
+
+    @BeforeEach
+    void init() {
+        filmController = new FilmController();
+    }
 
     @Test
     void validateFilmOk() {
