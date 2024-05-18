@@ -44,3 +44,4 @@ build/
 
 *.db
 db/*
+/src/main/resources/checkstyle/

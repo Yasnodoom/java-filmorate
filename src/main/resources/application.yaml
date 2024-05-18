@@ -1,0 +1,10 @@
+spring:
+  main:
+    log-startup-info: false
+    banner-mode: off
+
+server:
+  error:
+    include-message: always
+
+logging.level.org.zalando.logbook: TRACE
