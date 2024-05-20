@@ -13,15 +13,16 @@ import java.util.Set;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/users")
 public class UserController {
     private final UserService userService;
 
-    @GetMapping("/users")
+    @GetMapping
     public Collection<User> getAll() {
         return userService.getAll();
     }
 
-    @PostMapping("/users")
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public User create(@RequestBody final User user) {
         userService.create(user);
@@ -29,32 +30,32 @@ public class UserController {
         return user;
     }
 
-    @PutMapping("/users")
+    @PutMapping
     public User update(@RequestBody final User user) {
         userService.update(user);
         log.info("User updated {}", user);
         return user;
     }
 
-    @PutMapping("/users/{id}/friends/{friendId}")
+    @PutMapping("/{id}/friends/{friendId}")
     public void addFriend(@PathVariable long id, @PathVariable long friendId) {
         userService.addFriend(id, friendId);
         log.info("To userId {} add friendId {}", id, friendId);
     }
 
-    @DeleteMapping("/users/{id}/friends/{friendId}")
+    @DeleteMapping("/{id}/friends/{friendId}")
     public void deleteFriend(@PathVariable long id, @PathVariable long friendId) {
         userService.deleteFriend(id, friendId);
         log.info("At userId {} delete friendId {}", id, friendId);
     }
 
-    @GetMapping("/users/{id}/friends")
+    @GetMapping("/{id}/friends")
     public Set<User> getFriends(@PathVariable long id) {
         log.info("Get friends for userId {}", id);
         return userService.getFriends(id);
     }
 
-    @GetMapping("/users/{id}/friends/common/{otherId}")
+    @GetMapping("/{id}/friends/common/{otherId}")
     public Set<User> getCommonFriends(@PathVariable long id, @PathVariable long otherId) {
         log.info("Get common friends for userId {} and otherId {}", id, otherId);
         return userService.getCommonFriends(id, otherId);

@@ -1,14 +1,14 @@
 package ru.yandex.practicum.filmorate.util;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import ru.yandex.practicum.filmorate.model.StorageData;
 
 import java.util.Collection;
 import java.util.Objects;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class Utils {
-    private Utils() {
-    }
-
     public static long getNextId(final Collection<? extends StorageData> data) {
         long currentMaxId = data.stream()
                 .map(StorageData::getId)

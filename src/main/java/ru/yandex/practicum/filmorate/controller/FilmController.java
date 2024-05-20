@@ -13,15 +13,16 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/films")
 public class FilmController {
     private final FilmService filmService;
 
-    @GetMapping("/films")
+    @GetMapping
     public Collection<Film> getAll() {
         return filmService.getAll();
     }
 
-    @PostMapping("/films")
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Film create(@RequestBody final Film film) {
         filmService.create(film);
@@ -29,26 +30,26 @@ public class FilmController {
         return film;
     }
 
-    @PutMapping("/films")
+    @PutMapping
     public Film update(@RequestBody final Film film) {
         filmService.update(film);
         log.info("Film updated {}", film);
         return film;
     }
 
-    @PutMapping("/films/{id}/like/{userId}")
+    @PutMapping("/{id}/like/{userId}")
     public void addLike(@PathVariable long id, @PathVariable long userId) {
         filmService.addLike(id, userId);
         log.info("Added like to Film {} by user {}", id, userId);
     }
 
-    @DeleteMapping("/films/{id}/like/{userId}")
+    @DeleteMapping("/{id}/like/{userId}")
     public void deleteLike(@PathVariable long id, @PathVariable long userId) {
         filmService.deleteLike(id, userId);
         log.info("Deleted like to Film {} by user {}", id, userId);
     }
 
-    @GetMapping("/films/popular")
+    @GetMapping("/popular")
     public List<Film> getPopular(@RequestParam(defaultValue = "10") int count) {
         return filmService.getPopular(count);
     }
