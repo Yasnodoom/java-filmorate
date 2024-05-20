@@ -32,16 +32,17 @@ class UserServiceTest {
         userStorage = new InMemoryUserStorage();
         userService = new UserService(userStorage);
         validUser = new User(
+                1L,
                 "test@test.ru",
                 "Login",
                 "John",
                 LocalDate.of(1990, 1, 1),
                 new HashSet<>()
         );
-        validUser.setId(1L);
 
         // without id
         friend = new User(
+                1L,
                 "test@test.ru",
                 "LoginFriend",
                 "Andy",
@@ -140,6 +141,7 @@ class UserServiceTest {
         successfulAddFriend();
 
         User user3 = new User(
+                3L,
                 "test@test.ru",
                 "Garage",
                 "Max",
@@ -148,7 +150,6 @@ class UserServiceTest {
         );
 
         final long user3Id = 3L;
-        user3.setId(user3Id);
         userStorage.create(user3);
         final long user2Id = friend.getId();
 

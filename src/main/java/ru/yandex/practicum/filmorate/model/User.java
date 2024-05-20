@@ -7,11 +7,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
-@ToString(callSuper = true)
+@EqualsAndHashCode(of = {"id"},callSuper = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class User extends StorageData {
+    @NonNull
+    private Long id;
     private String email;
     private String login;
     private String name;

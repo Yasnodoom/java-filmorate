@@ -1,14 +1,8 @@
 package ru.yandex.practicum.filmorate.model;
 
-import jakarta.validation.constraints.NotNull;
-import lombok.*;
+import lombok.NoArgsConstructor;
 
-@Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@ToString
 public abstract class StorageData {
-    @NotNull
-    Long id;
+   public abstract Long getId();
 }

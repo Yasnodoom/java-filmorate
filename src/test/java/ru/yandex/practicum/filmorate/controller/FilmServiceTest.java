@@ -37,21 +37,21 @@ class FilmServiceTest {
         userService = new UserService(userStorage);
         filmService = new FilmService(filmStorage, userService);
         validFilm = new Film(
+                1L,
                 "Матрица",
                 "Описание",
                 LocalDate.of(1999, 12, 28),
                 Duration.ofMinutes(120),
                 new HashSet<>()
         );
-        validFilm.setId(1L);
         user = new User(
+                1L,
                 "test@test.ru",
                 "Login",
                 "John",
                 LocalDate.of(1990, 1, 1),
                 new HashSet<>()
         );
-        user.setId(1L);
 
         filmStorage.create(validFilm);
         userStorage.create(user);
