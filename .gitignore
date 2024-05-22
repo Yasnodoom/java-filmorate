@@ -44,3 +44,6 @@ build/
 
 *.db
 db/*
+
+/checkstyle.xml
+/suppressions.xml
