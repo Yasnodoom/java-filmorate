@@ -4,6 +4,10 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ru.yandex.practicum.filmorate.model.StorageData;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.Objects;
 
@@ -19,5 +23,9 @@ public class Utils {
 
     public static boolean hasId(final Collection<? extends StorageData> data, final Long id) {
         return data.stream().anyMatch(obj -> Objects.equals(obj.getId(), id));
+    }
+
+    public static LocalDate convertToLocalDate(String date) {
+        return  LocalDate.parse(date, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
     }
 }

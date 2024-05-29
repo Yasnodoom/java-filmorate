@@ -6,6 +6,7 @@ import lombok.*;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -19,6 +20,8 @@ public class Film extends StorageData {
     private String description;
     private LocalDate releaseDate;
     private Duration duration;
+    private Mpa mpa;
+    private List<Genre> genres;
     private Set<Long> likes = new HashSet<>();
 
     @JsonProperty("duration")
