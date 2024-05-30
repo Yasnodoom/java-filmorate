@@ -12,24 +12,34 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
+import static ru.yandex.practicum.filmorate.util.Utils.convertToLocalDate;
+
 @Component
 public class FilmRowMapper implements RowMapper<Film> {
     @Override
     public Film mapRow(ResultSet rs, int rowNum) throws SQLException {
         Film film = new Film();
 
-        film.setId(rs.getLong("film_id"));
+        film.setId(rs.getLong("id"));
         film.setName(rs.getString("name"));
-        film.setDescription(rs.getString("description"));
-        film.setDuration(Duration.ofSeconds(rs.getInt("duration")));
+        film.setDescription(rs.getString("desc"));
+        film.setDuration(Duration.ofSeconds(rs.getInt("d")));
+        film.setReleaseDate(convertToLocalDate(rs.getString("rd")));
+
         Mpa mpa = new Mpa();
-        mpa.setId(rs.getLong("rating_id" ));
+        mpa.setId(rs.getLong("ri" ));
+        mpa.setName(rs.getString("rn"));
         film.setMpa(mpa);
-        Genre genre = new Genre();
-        genre.setId(rs.getLong("genre_id"));
-        List<Genre> genres = new ArrayList<>();
-        genres.add(genre);
-        film.setGenres(genres);
+
+        if (rs.getLong("gi") != 0) {
+            Genre genre = new Genre();
+            genre.setId(rs.getLong("gi"));
+            genre.setName(rs.getString("gn"));
+            List<Genre> genres = new ArrayList<>();
+            genres.add(genre);
+            film.setGenres(genres);
+        }
+
 
         return film;
     }

@@ -23,35 +23,56 @@ public class FilmDbStorage implements FilmStorage {
     private final JdbcTemplate jdbcTemplate;
     private final FilmRowMapper mapper;
 
+    private static final String FIND_FILM_BY_ID = """
+            SELECT f.film_id id, f.name name, f.description desc, f.release_date rd, f.duration d,
+            g.genre_id gi, g.name gn, r.rating_id ri, r.name rn
+            FROM films f
+            LEFT JOIN genre g ON f.genre_id = g.genre_id
+            LEFT JOIN rating r ON f.rating_id = r.rating_id
+            WHERE film_id = ?
+            """;
+
+    private static final String FIND_ALL_FILMS = """
+            SELECT f.film_id id, f.name name, f.description desc, f.release_date rd, f.duration d,
+            g.genre_id gi, g.name gn, r.rating_id ri, r.name rn
+            FROM films f
+            LEFT JOIN genre g ON f.genre_id = g.genre_id
+            LEFT JOIN rating r ON f.rating_id = r.rating_id
+            """;
+
     @Override
     public void create(Film data) {
         String sqlQuery = """
-                insert into films (
-                    name, description, release_date, duration, genre_id, rating_id
-                )
-                values (?, ?, ?, ?, ?, ?)
+                INSERT INTO films (name, description, release_date, duration, genre_id, rating_id)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """;
 
-        Long genreId = null;
+        int genres;
         if (data.getGenres() != null) {
-            genreId = data.getGenres().getFirst().getId();
+            genres = data.getGenres().size();
+        } else {
+            genres = 1;
         }
-        final Long finalGenreId = genreId;
-
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
-        jdbcTemplate.update(connection -> {
-            PreparedStatement stmt = connection.prepareStatement(sqlQuery, new String[]{"film_id"});
-            stmt.setString(1, data.getName());
-            stmt.setString(2, data.getDescription());
-            stmt.setDate(3, Date.valueOf(data.getReleaseDate()));
-            stmt.setLong(4, data.getDuration().getSeconds());
-            stmt.setObject(5, finalGenreId, Types.BIGINT);
-            stmt.setLong(6, data.getMpa().getId());
-            return stmt;
-        }, keyHolder);
-
-        data.setId(keyHolder.getKey().longValue());
+        for (int i = 0; i < genres; i++) {
+            int finalI = i;
+            jdbcTemplate.update(connection -> {
+                PreparedStatement stmt = connection.prepareStatement(sqlQuery, new String[]{"film_id"});
+                stmt.setString(1, data.getName());
+                stmt.setString(2, data.getDescription());
+                stmt.setDate(3, Date.valueOf(data.getReleaseDate()));
+                stmt.setLong(4, data.getDuration().getSeconds());
+                if (data.getGenres() == null) {
+                    stmt.setNull(5, Types.BIGINT);
+                } else {
+                    stmt.setObject(5, data.getGenres().get(finalI).getId(), Types.BIGINT);
+                }
+                stmt.setLong(6, data.getMpa().getId());
+                return stmt;
+            }, keyHolder);
+            data.setId(keyHolder.getKey().longValue());
+        }
     }
 
     @Override
@@ -77,17 +98,17 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Collection<Film> getAll() {
-        return jdbcTemplate.query("select * from films", mapper);
+        return jdbcTemplate.query(FIND_ALL_FILMS, mapper);
     }
 
     @Override
     public Optional<Film> getElement(Long id) {
-        String query = "SELECT * FROM films WHERE film_id = ?";
         try {
-            Film result = jdbcTemplate.queryForObject(query, mapper, id);
+            Film result = jdbcTemplate.queryForObject(FIND_FILM_BY_ID, mapper, id);
             return Optional.ofNullable(result);
         } catch (EmptyResultDataAccessException ignored) {
             return Optional.empty();
         }
     }
+
 }

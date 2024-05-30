@@ -18,54 +18,58 @@ import static ru.yandex.practicum.filmorate.util.Utils.hasId;
 @Service
 @RequiredArgsConstructor
 public class FilmService {
-    private final Storage<Film> inMemoryFilmStorage;
+    private final Storage<Film> filmStorage;
     private final UserService userService;
+    private final GenreService genreService;
 
     private static final int MAX_DESCRIPTION_SIZE = 200;
     private static final LocalDate MIN_RELEASE_DATE = LocalDate.of(1895, 12, 28);
 
     public void create(Film film) {
         validate(film);
-        film.setId(getNextId(inMemoryFilmStorage.getAll()));
-        inMemoryFilmStorage.create(film);
+        film.setId(getNextId(filmStorage.getAll()));
+        filmStorage.create(film);
     }
 
     public void update(Film film) {
-        if (film.getId() == null) {
-            throw new ValidationException("не указан id");
-        }
-        if (!hasId(inMemoryFilmStorage.getAll(), film.getId())) {
+        if (!hasId(filmStorage.getAll(), film.getId())) {
             throw new NotFoundException("не найден фильм с id: " + film);
         }
 
         validate(film);
-        inMemoryFilmStorage.update(film);
+        filmStorage.update(film);
     }
 
     public Collection<Film> getAll() {
-        return inMemoryFilmStorage.getAll();
+        return filmStorage.getAll();
     }
 
     public void addLike(long id, long userId) {
-        Film film = validateFilmId(id);
+        Film film = getFilm(id);
         userService.validateUserId(userId);
         film.getLikes().add(userId);
     }
 
     public void deleteLike(long id, long userId) {
-        Film film = validateFilmId(id);
+        Film film = getFilm(id);
         userService.validateUserId(userId);
         film.getLikes().remove(userId);
 
     }
 
     public List<Film> getPopular(int count) {
-        return inMemoryFilmStorage.getAll().stream()
+        return filmStorage.getAll().stream()
                 .sorted(Comparator.comparingInt(f -> f.getLikes().size()))
                 .limit(count)
                 .toList().reversed();
     }
 
+    public Film getFilm(long id) {
+        Film film = filmStorage.getElement(id)
+                .orElseThrow(() -> new NotFoundException("не найден фильм с id: " + id));
+        film.setGenres(genreService.getGenreByFilmId(film.getName(), film.getDuration(), film.getReleaseDate()));
+        return film;
+    }
 
     public void validate(Film film) {
         if (film.getName() == null || film.getName().isEmpty() || film.getName().isBlank()) {
@@ -85,8 +89,4 @@ public class FilmService {
         }
     }
 
-    private Film validateFilmId(Long id) {
-        return inMemoryFilmStorage.getElement(id)
-                .orElseThrow(() -> new NotFoundException("не найден фильм с id: " + id));
-    }
 }

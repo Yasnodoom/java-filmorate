@@ -38,6 +38,7 @@ public class ErrorHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleSQLException(final DataIntegrityViolationException e) {
-        return new ErrorResponse("SQL error");
+//        return new ErrorResponse("SQL error");
+        return new ErrorResponse(e.getMessage());
     }
 }
