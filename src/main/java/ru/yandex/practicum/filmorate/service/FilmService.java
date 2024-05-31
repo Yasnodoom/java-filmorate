@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static ru.yandex.practicum.filmorate.util.Utils.getNextId;
-import static ru.yandex.practicum.filmorate.util.Utils.hasId;
 
 @Service
 @RequiredArgsConstructor
@@ -35,10 +34,7 @@ public class FilmService {
     }
 
     public void update(Film film) {
-        if (!hasId(filmStorage.getAll(), film.getId())) {
-            throw new NotFoundException("не найден фильм с id: " + film);
-        }
-
+        validateFilmId(film.getId());
         validate(film);
         filmStorage.update(film);
     }
@@ -49,11 +45,13 @@ public class FilmService {
 
     public void addLike(long id, long userId) {
         userService.validateUserId(userId);
+        validateFilmId(id);
         likeDbStorage.addLike(id, userId);
     }
 
     public void deleteLike(long id, long userId) {
         userService.validateUserId(userId);
+        validateFilmId(id);
         likeDbStorage.deleteLike(id, userId);
     }
 
@@ -66,8 +64,7 @@ public class FilmService {
     }
 
     public Film getFilm(long id) {
-        Film film = filmStorage.getElement(id)
-                .orElseThrow(() -> new NotFoundException("не найден фильм с id: " + id));
+        Film film = validateFilmId(id);
         film.setMpa(mpaService.getMpa(film.getMpa().getId()));
         film.setGenres(genreService.getGenreByFilmId(id));
 
@@ -90,5 +87,10 @@ public class FilmService {
         if (film.getDuration().isNegative() || film.getDuration().isZero()) {
             throw new ValidationException("продолжительность фильма должна быть положительным числом");
         }
+    }
+
+    private Film validateFilmId(Long id) {
+        return filmStorage.getElement(id)
+                .orElseThrow(() -> new NotFoundException("не найден фильм с id: " + id));
     }
 }
