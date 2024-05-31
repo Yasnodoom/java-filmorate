@@ -6,8 +6,6 @@ import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.storage.genre.GenreDbStorage;
 
-import java.time.Duration;
-import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 
@@ -25,7 +23,7 @@ public class GenreService {
                 .orElseThrow(() -> new NotFoundException("не найден жанр с id: " + id));
     }
 
-    public List<Genre> getGenreByFilmId(String name, Duration duration, LocalDate date) {
-        return genreDbStorage.getGenreByFilmId(name, duration, date);
+    public List<Genre> getGenreByFilmId(Long id) {
+        return genreDbStorage.getGenreByFilmId(id);
     }
 }

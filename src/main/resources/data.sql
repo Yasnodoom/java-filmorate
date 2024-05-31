@@ -1,7 +1,15 @@
+DELETE FROM likes;
+DELETE FROM GENRES_FILMS;
+DELETE FROM friendship;
 DELETE FROM FILMS;
 DELETE FROM rating;
 DELETE FROM genre;
+DELETE FROM users;
+DELETE FROM friendship_status;
+
+
 ALTER TABLE films ALTER COLUMN film_id RESTART WITH 1;
+ALTER TABLE users ALTER COLUMN user_id RESTART WITH 1;
 ALTER TABLE genre ALTER COLUMN genre_id RESTART WITH 1;
 ALTER TABLE rating ALTER COLUMN rating_id RESTART WITH 1;
 
@@ -17,3 +25,6 @@ INSERT INTO rating (name, description) VALUES ('PG', 'детям рекомен�
 INSERT INTO rating (name, description) VALUES ('PG-13', 'детям до 13 лет просмотр не желателен');
 INSERT INTO rating (name, description) VALUES ('R', 'лицам до 17 лет просматривать фильм можно только в присутствии взрослого');
 INSERT INTO rating (name, description) VALUES ('NC-17', 'лицам до 18 лет просмотр запрещён');
+
+INSERT INTO friendship_status (id, name) VALUES (0, 'new');
+INSERT INTO friendship_status (id, name) VALUES (1, 'apply');

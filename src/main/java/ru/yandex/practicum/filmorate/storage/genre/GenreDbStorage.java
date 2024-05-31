@@ -7,8 +7,6 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.mapper.GenreRowMapper;
 import ru.yandex.practicum.filmorate.model.Genre;
 
-import java.time.Duration;
-import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -33,14 +31,13 @@ public class GenreDbStorage {
         }
     }
 
-    public List<Genre> getGenreByFilmId(String name, Duration duration, LocalDate date) {
+    public List<Genre> getGenreByFilmId(Long id) {
         return jdbcTemplate.query("""
-                        SELECT g.genre_id, g.name
-                        FROM GENRE g
-                        WHERE g.GENRE_ID IN (SELECT DISTINCT f.genre_id
-                        FROM FILMS f
-                        WHERE f.NAME = ? AND f.DURATION = ? AND f.RELEASE_DATE = ?)
-                        """,
-                mapper, name, duration, date);
+                SELECT g.genre_id, g.name
+                FROM GENRES_FILMS gf
+                LEFT JOIN GENRE g ON gf.GENRE_ID = g.GENRE_ID
+                WHERE gf.FILM_ID = ?
+                ORDER BY g.genre_id
+                """, mapper, id);
     }
 }

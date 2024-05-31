@@ -18,7 +18,7 @@ public class MpaDbStorage {
     private final MpaRowMapper mapper;
 
     public Collection<Mpa> getAll() {
-        return jdbcTemplate.query("select * from rating", mapper);
+        return jdbcTemplate.query("SELECT * FROM rating", mapper);
     }
 
     public Optional<Mpa> getMpa(Long id) {

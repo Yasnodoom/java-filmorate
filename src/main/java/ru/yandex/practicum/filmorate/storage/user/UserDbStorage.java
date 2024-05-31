@@ -4,10 +4,14 @@ import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.mapper.UserRowMapper;
 import ru.yandex.practicum.filmorate.model.User;
 
+import java.sql.Date;
+import java.sql.PreparedStatement;
 import java.util.Collection;
 import java.util.Optional;
 
@@ -24,14 +28,18 @@ public class UserDbStorage implements UserStorage {
                 INSERT INTO users (email, login, name, birthday)
                 VALUES (?, ?, ?, ?)
                 """;
+        KeyHolder keyHolder = new GeneratedKeyHolder();
 
-        jdbcTemplate.update(
-                sqlQuery,
-                data.getEmail(),
-                data.getLogin(),
-                data.getName(),
-                data.getBirthday()
-        );
+        jdbcTemplate.update(connection -> {
+            PreparedStatement stmt = connection.prepareStatement(sqlQuery, new String[]{"user_id"});
+            stmt.setString(1, data.getEmail());
+            stmt.setString(2,  data.getLogin());
+            stmt.setString(3, data.getName());
+            stmt.setDate(4, Date.valueOf(data.getBirthday()));
+            return stmt;
+        }, keyHolder);
+
+        data.setId(keyHolder.getKey().longValue());
     }
 
     @Override
