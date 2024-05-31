@@ -1,36 +1,47 @@
 package ru.yandex.practicum.filmorate.controller;
 
+import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.mapper.UserRowMapper;
 import ru.yandex.practicum.filmorate.model.StorageData;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
-import ru.yandex.practicum.filmorate.storage.Storage;
-import ru.yandex.practicum.filmorate.storage.user.InMemoryUserStorage;
+import ru.yandex.practicum.filmorate.storage.friend.FriendshipDbStorage;
+import ru.yandex.practicum.filmorate.storage.user.UserDbStorage;
 
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
+@JdbcTest
+@AutoConfigureTestDatabase
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
 class UserServiceTest {
-    private static Storage<User> userStorage;
+    private static UserDbStorage userStorage;
     private static UserService userService;
+    private static FriendshipDbStorage friendshipDbStorage;
+
+    private final JdbcTemplate jdbcTemplate;
+    private final UserRowMapper mapper = new UserRowMapper();
 
     private User validUser;
     private User friend;
 
     @BeforeEach
     void init() {
-        userStorage = new InMemoryUserStorage();
-        userService = new UserService(userStorage);
+        userStorage = new UserDbStorage(jdbcTemplate, mapper);
+        friendshipDbStorage = new FriendshipDbStorage(jdbcTemplate);
+        userService = new UserService(userStorage, friendshipDbStorage);
         validUser = new User(
                 1L,
                 "test@test.ru",
@@ -90,13 +101,30 @@ class UserServiceTest {
 
     @Test
     void successfulAddFriend() {
-        final long friendId = 2L;
-        friend.setId(friendId);
+        User user = new User(
+                123L,
+                "test@test.ru",
+                "Login",
+                "John",
+                LocalDate.of(1990, 1, 1),
+                new HashSet<>()
+        );
 
-        userStorage.create(friend);
-        userService.addFriend(validUser.getId(), friend.getId());
-        assertEquals(validUser.getFriends(), Set.of(friendId));
-        assertEquals(friend.getFriends(), Set.of(validUser.getId()));
+        // without id
+        User user2 = new User(
+                1234L,
+                "test@test.ru",
+                "LoginFriend",
+                "Andy",
+                LocalDate.of(1990, 1, 1),
+                new HashSet<>()
+        );
+
+        userStorage.create(user);
+        userStorage.create(user2);
+        userService.addFriend(user.getId(), user2.getId());
+        assertEquals(friendshipDbStorage.getFriendsIdByUserId(user.getId()), List.of(user2.getId()));
+        assertNotEquals(friendshipDbStorage.getFriendsIdByUserId(user2.getId()), List.of(user.getId()));
     }
 
     @Test
@@ -133,15 +161,29 @@ class UserServiceTest {
     @Test
     void validateErrorWhenDeleteFriendAndUserIdNotExist() {
         final long userId = validUser.getId();
-        assertThrows(NotFoundException.class, () -> userService.deleteFriend(3L, userId));
+        assertThrows(NotFoundException.class, () -> userService.deleteFriend(99999L, userId));
     }
 
     @Test
     void successfulGetCommonFriend() {
-        successfulAddFriend();
-
+        User user = new User(
+                111L,
+                "test@test.ru",
+                "Login",
+                "John",
+                LocalDate.of(1990, 1, 1),
+                new HashSet<>()
+        );
+        User user2 = new User(
+                222L,
+                "test@test.ru",
+                "LoginFriend",
+                "Andy",
+                LocalDate.of(1990, 1, 1),
+                new HashSet<>()
+        );
         User user3 = new User(
-                3L,
+                333L,
                 "test@test.ru",
                 "Garage",
                 "Max",
@@ -149,14 +191,13 @@ class UserServiceTest {
                 new HashSet<>()
         );
 
-        final long user3Id = 3L;
+        userStorage.create(user);
+        userStorage.create(user2);
         userStorage.create(user3);
-        final long user2Id = friend.getId();
+        userService.addFriend(user.getId(), user2.getId());
+        userService.addFriend(user3.getId(), user2.getId());
 
-        userService.addFriend(validUser.getId(), user3Id);
-        userService.addFriend(user2Id, user3Id);
-
-        assertEquals(userService.getCommonFriends(user2Id, validUser.getId()), Set.of(user3));
+        assertEquals(1, userService.getCommonFriends(user.getId(), user3.getId()).size());
     }
 
     @Test

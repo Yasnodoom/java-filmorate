@@ -1,47 +1,81 @@
 package ru.yandex.practicum.filmorate.controller;
 
+import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.mapper.FilmRowMapper;
+import ru.yandex.practicum.filmorate.mapper.GenreRowMapper;
+import ru.yandex.practicum.filmorate.mapper.MpaRowMapper;
+import ru.yandex.practicum.filmorate.mapper.UserRowMapper;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.FilmService;
+import ru.yandex.practicum.filmorate.service.GenreService;
+import ru.yandex.practicum.filmorate.service.MpaService;
 import ru.yandex.practicum.filmorate.service.UserService;
-import ru.yandex.practicum.filmorate.storage.Storage;
+import ru.yandex.practicum.filmorate.storage.film.FilmDbStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
-import ru.yandex.practicum.filmorate.storage.film.InMemoryFilmStorage;
-import ru.yandex.practicum.filmorate.storage.user.InMemoryUserStorage;
+import ru.yandex.practicum.filmorate.storage.friend.FriendshipDbStorage;
+import ru.yandex.practicum.filmorate.storage.genre.GenreDbStorage;
+import ru.yandex.practicum.filmorate.storage.like.LikeDbStorage;
+import ru.yandex.practicum.filmorate.storage.mpa.MpaDbStorage;
+import ru.yandex.practicum.filmorate.storage.user.UserDbStorage;
 
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
+@JdbcTest
+@AutoConfigureTestDatabase
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
 class FilmServiceTest {
-    private static Storage<Film> filmStorage;
-    private static Storage<User> userStorage;
+    private static FilmDbStorage filmStorage;
+    private static UserDbStorage userStorage;
     private static UserService userService;
     private static FilmService filmService;
+    private static FriendshipDbStorage friendshipDbStorage;
+    private static LikeDbStorage likeDbStorage;
+
+    private final JdbcTemplate jdbcTemplate;
+    private final FilmRowMapper mapper = new FilmRowMapper();
 
     private Film validFilm;
     private User user;
 
     @BeforeEach
     void init() {
-        filmStorage = new InMemoryFilmStorage();
-        userStorage = new InMemoryUserStorage();
-        userService = new UserService(userStorage);
-        filmService = new FilmService(filmStorage, userService);
+        filmStorage = new FilmDbStorage(jdbcTemplate, mapper);
+
+        userStorage = new UserDbStorage(jdbcTemplate, new UserRowMapper());
+        friendshipDbStorage = new FriendshipDbStorage(jdbcTemplate);
+        userService = new UserService(userStorage, friendshipDbStorage);
+        filmService = new FilmService(
+                filmStorage,
+                new LikeDbStorage(jdbcTemplate),
+                userService,
+                new GenreService(new GenreDbStorage(jdbcTemplate, new GenreRowMapper())),
+                new MpaService(new MpaDbStorage(jdbcTemplate, new MpaRowMapper()))
+                );
+        likeDbStorage =  new LikeDbStorage(jdbcTemplate);
         validFilm = new Film(
                 1L,
                 "Матрица",
                 "Описание",
                 LocalDate.of(1999, 12, 28),
                 Duration.ofMinutes(120),
+                new Mpa(1L),
+                List.of(new Genre(1L, "ganre")),
                 new HashSet<>()
         );
         user = new User(
@@ -65,7 +99,7 @@ class FilmServiceTest {
     @Test
     void validateFilmFailEmptyName() {
         validFilm.setName("");
-         assertThrows(ValidationException.class, () -> filmService.validate(validFilm));
+        assertThrows(ValidationException.class, () -> filmService.validate(validFilm));
     }
 
     @Test
@@ -108,25 +142,24 @@ class FilmServiceTest {
     void successfulAddLike() {
         assertEquals(0, validFilm.getLikes().size());
         filmService.addLike(validFilm.getId(), user.getId());
-        assertEquals(1, validFilm.getLikes().size());
+        assertEquals(1, likeDbStorage.getPopular(1).size());
     }
 
     @Test
     void validateErrorWhenAddLikeAndFilmsIdNotExist() {
         final long userId = user.getId();
-        assertThrows(NotFoundException.class, () ->  filmService.addLike(999L, userId));
+        assertThrows(NotFoundException.class, () -> filmService.addLike(999L, userId));
     }
 
     @Test
     void validateErrorWhenAddLikeAndUserIdNotExist() {
         final long filmId = validFilm.getId();
-        assertThrows(NotFoundException.class, () ->  filmService.addLike(filmId, 4L));
+        assertThrows(NotFoundException.class, () -> filmService.addLike(filmId, 4L));
     }
 
     @Test
     void successfulDeleteLike() {
         successfulAddLike();
-        assertEquals(1, validFilm.getLikes().size());
         filmService.deleteLike(validFilm.getId(), user.getId());
         assertEquals(0, validFilm.getLikes().size());
     }
@@ -134,19 +167,26 @@ class FilmServiceTest {
     @Test
     void validateErrorWhenDeleteLikeAndFilmsIdNotExist() {
         final long userId = user.getId();
-        assertThrows(NotFoundException.class, () ->  filmService.deleteLike(999L, userId));
+        assertThrows(NotFoundException.class, () -> filmService.deleteLike(999L, userId));
     }
 
     @Test
     void getPopularFilmsIfFilmsEmptyShouldReturnZero() {
-        FilmStorage emptyFilmStorage = new InMemoryFilmStorage();
-        FilmService newFilmService = new FilmService(emptyFilmStorage, userService);
+        FilmStorage emptyFilmStorage = new FilmDbStorage(jdbcTemplate, mapper);
+        FilmService newFilmService = new FilmService(
+                emptyFilmStorage,
+                new LikeDbStorage(jdbcTemplate),
+                new UserService(userStorage, new FriendshipDbStorage(jdbcTemplate)),
+                new GenreService(new GenreDbStorage(jdbcTemplate, new GenreRowMapper())),
+                new MpaService(new MpaDbStorage(jdbcTemplate, new MpaRowMapper()))
+                );
         final int films = newFilmService.getPopular(10).size();
         assertEquals(0, films);
     }
 
     @Test
     void getPopularFilmsIfFilmsExistShouldReturnFilms() {
+        successfulAddLike();
         final int films = filmService.getPopular(10).size();
         assertEquals(1, films);
     }

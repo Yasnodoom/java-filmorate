@@ -60,4 +60,10 @@ public class UserController {
         log.info("Get common friends for userId {} and otherId {}", id, otherId);
         return userService.getCommonFriends(id, otherId);
     }
+
+    @PutMapping("/{acceptedId}/confirm-friend/{alreadyFriendId}")
+    public void confirmFriend(@PathVariable long acceptedId, @PathVariable long alreadyFriendId) {
+        userService.confirmFriend(acceptedId, alreadyFriendId);
+        log.info("UserId {} confirm friendship with userId {}", acceptedId, alreadyFriendId);
+    }
 }

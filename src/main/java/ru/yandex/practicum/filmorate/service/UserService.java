@@ -6,9 +6,11 @@ import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.Storage;
+import ru.yandex.practicum.filmorate.storage.friend.FriendshipDbStorage;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -18,70 +20,80 @@ import static ru.yandex.practicum.filmorate.util.Utils.hasId;
 @Service
 @RequiredArgsConstructor
 public class UserService {
-    private final Storage<User> inMemoryUserStorage;
+    private final Storage<User> userStorage;
+    private final FriendshipDbStorage friendshipDbStorage;
 
     public void create(User user) {
         validate(user);
         replaceNameIfEmpty(user);
-        user.setId(getNextId(inMemoryUserStorage.getAll()));
-        inMemoryUserStorage.create(user);
+        user.setId(getNextId(userStorage.getAll()));
+        userStorage.create(user);
     }
 
     public void update(User user) {
-        if (user.getId() == null) {
-            throw new ValidationException("Id должен быть указан");
-        }
-        if (!hasId(inMemoryUserStorage.getAll(), user.getId())) {
+        if (!hasId(userStorage.getAll(), user.getId())) {
             throw new NotFoundException("не найден пользователь с id: " + user.getId());
         }
 
         validate(user);
         replaceNameIfEmpty(user);
-        inMemoryUserStorage.update(user);
+        userStorage.update(user);
     }
 
     public Collection<User> getAll() {
-        return inMemoryUserStorage.getAll();
+        return userStorage.getAll();
     }
 
     public void addFriend(Long userId, Long friendId) {
-        User friend = validateUserId(friendId);
         User user = validateUserId(userId);
-        if (user.getFriends().contains(friendId)) {
+        User friend = validateUserId(friendId);
+        if (getFriends(userId).contains(friend)) {
             return;
         }
 
         user.getFriends().add(friendId);
-        friend.getFriends().add(userId);
+        friendshipDbStorage.setFriendship(user);
     }
 
     public void deleteFriend(Long userId, Long friendId) {
-        User friend = validateUserId(friendId);
+        validateUserId(friendId);
         User user = validateUserId(userId);
 
         user.getFriends().remove(friendId);
-        friend.getFriends().remove(userId);
+        friendshipDbStorage.deleteFriend(userId, friendId);
     }
 
     public Set<User> getFriends(Long userId) {
-        return validateUserId(userId).getFriends().stream()
-                .map(id -> inMemoryUserStorage.getElement(id).get())
+        validateUserId(userId);
+        return friendshipDbStorage.getFriendsIdByUserId(userId)
+                .stream()
+                .map(userStorage::getElement)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .collect(Collectors.toSet());
     }
 
     public Set<User> getCommonFriends(Long userId, Long otherId) {
-        User user = validateUserId(userId);
-        User other = validateUserId(otherId);
+        validateUserId(userId);
+        validateUserId(otherId);
 
-        return user.getFriends().stream()
-                .filter(n -> !other.getFriends().add(n))
-                .map(id -> inMemoryUserStorage.getElement(id).get())
+        return friendshipDbStorage.getFriendsIdByUserId(userId).stream()
+                .distinct()
+                .filter(friendshipDbStorage.getFriendsIdByUserId(otherId)::contains)
+                .map(userStorage::getElement)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .collect(Collectors.toSet());
     }
 
     public User validateUserId(Long id) {
-        return inMemoryUserStorage.getElement(id)
+        return userStorage.getElement(id)
                 .orElseThrow(() -> new NotFoundException("не найден пользователь с id: " + id));
+    }
+
+    public void confirmFriend(long acceptedId, long alreadyFriendId) {
+        addFriend(acceptedId,alreadyFriendId);
+        friendshipDbStorage.updateFriendshipStatus(acceptedId,alreadyFriendId);
     }
 
     public void validate(User user) {
@@ -100,6 +112,5 @@ public class UserService {
             user.setName(user.getLogin());
         }
     }
-
 
 }
